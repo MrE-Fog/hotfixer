@@ -1,5 +1,7 @@
 # HOTFIXER
   * This repo contains HOTFIXER, a tool for hotfixing Crypto API misuses in Java applications. HOTFIXER is built of many different software components, all of which are listed below. HOTFIXER was developed and tested in [Docker](https://www.docker.com/), however the steps should remain roughly the same on Ubuntu (18.04) if one should choose.
+  * most of these steps could be throw into a script and you could walk away while it does its thing. but if you do that, stick around for the `apt-get`s, actually, probably do those first so you can hit `y` (yes you want to take up space/install ect.)
+  * the setup time overall will vary depending on compute power ect of your machine, but this overall does take a while, expect at least 1/2 an hour - 1 hour of time since there are several cloning and building steps.
 
 
 # SETUP
@@ -70,7 +72,7 @@
     make all
     ```
 
-7) confirm JVM build was successful, the output of `/root/openj9-openjdk-jdk8/build/linux-x86_64-normal-server-release/images/j2sdk-image/bin/java -version` should look similar to this (after aliasing step we can do `java -version` but should check first that it worked before aliasing otherwise we might change a required bootJVM path):
+7) confirm JVM build was successful, the output of `/root/openj9-openjdk-jdk8/build/linux-x86_64-normal-server-release/images/j2sdk-image/bin/java -version` should look similar to this (after aliasing step we can do `java -version` but should check first that it worked before aliasing otherwise we might change a required bootJVM path). The timestamp related portions will be different but version type portions should look identical.
     ```
     openjdk version "1.8.0_252-internal"
     OpenJDK Runtime Environment (build 1.8.0_252-internal-_2020_11_23_22_29-b00)
@@ -80,7 +82,7 @@
     JCL      - 6a92a55d72 based on jdk8u252-b09)
     ```
 ### setup all correct aliases and env vars for our JVM build
-* You may put them in bashrc, if you want, but for some reason even after I source the bashrc, my subshells only see the java alias but not the javac alias which is weird. At least with the snippet below you can easily copy the full javac path for future use, although that is a terrible way to have to invoke it.
+* You may put them in bashrc, if you want, but for some reason even after I source the bashrc, my subshells only see the java alias but not the javac alias which is weird. At least with the snippet below you can easily copy the full javac path for future use, although that is a terrible way to have to invoke javac...
     ```
     export JAVA_HOME=/root/openj9-openjdk-jdk8/build/linux-x86_64-normal-server-release/images/j2sdk-image
 
@@ -168,5 +170,33 @@
     mv /root/ssDiffTool/agent/agent.jar .
     ```
 
+# HOW TO RUN
+## CryptoGuardBench
+```
+# get the data
+cd ~/
+git clone https://github.com/themaplelab/cryptoapi-bench.git
 
+# now we move some run scripts around 
+cp /root/ssDiffTool/runScripts/allpatches.out .
+cp /root/ssDiffTool/runScripts/runCogniServerBasic.sh /root/CryptoAnalysis/
+cp /root/ssDiffTool/runScripts/runALLBasic.sh .
+cp /root/ssDiffTool/runScripts/runHotFixBasic.sh .
 
+# get gradle
+apt-get install gradle
+
+# then we run
+./runALLBasic.sh
+```
+* some of the output is then sent to stdout, but all of it is also recorded in `/root/basicBmkResults/misuseX` folders
+* quick guide to how the output is sorted, since HOTFIXER has many components:
+    1) JIT/JVM output located in *TEST.txt files
+    2) CogniServer/CogniCrypt output located in *ALL.txt files
+    3) summary of both scraped into *REPORT.txt files
+* the run script here is currently set to run 1 sample. It can be modified to run additional/alternative ones, by modifying the `repos` and `classes` sets in `runALLBasic.sh`
+* for example to run misuse2 we would check the contents of `/root/cryptoapi-bench/patch/misuse2/classes.txt ` to see what class to add to the classes set.
+
+### Extra running details
+* each test may take between 2-4 minutes to run since the scripts have some padding sleeps for the output scraping.
+* the setup does not gracefully check for ports already in use. it is advised that you check running processes after each run to assure that no processes are left hanging which would impact future runs. Similarly, this cannot be parallelized at this time, without a more modular design for providing port numbers.
